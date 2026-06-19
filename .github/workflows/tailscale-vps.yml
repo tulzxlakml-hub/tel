@@ -1,0 +1,43 @@
+name: Tailscale VPS Access
+
+on:
+  workflow_dispatch:
+
+jobs:
+  vps-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Enable SSH Server
+        run: |
+          echo "🔑 Enabling SSH on runner..."
+          sudo systemctl start ssh
+          sudo systemctl enable ssh
+          
+          # Set user 'runner' dengan password 'runner'
+          echo "runner:runner" | sudo chpasswd
+          
+          # Izinkan login password
+          sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo systemctl restart ssh
+          
+          # Tampilkan IP Tailscale agar mudah dicatat
+          echo "✅ SSH READY!"
+          echo "🌐 Tailscale IP: $(tailscale ip -4)"
+          echo " User: runner"
+          echo " Pass: runner"
+
+      - name: Keep Runner Alive
+        run: |
+          echo "⏳ Runner aktif selama 360 menit. SSH sekarang!"
+          while true; do sleep 60; done
